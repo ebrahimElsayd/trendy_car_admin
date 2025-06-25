@@ -17,10 +17,16 @@ class UserRiverpod extends StateNotifier<UserRiverpodState> {
   Future<void> updateUser(
     String userId,
     String newName,
-    String newPhone,
-  ) async {
+    String newPhone, {
+    String? newState,
+  }) async {
     state = state.copyWith(state: userState.loading);
-    final result = await repository.updateUser(userId, newName, newPhone);
+    final result = await repository.updateUser(
+      userId,
+      newName,
+      newPhone,
+      newState: newState,
+    );
     result.fold(
       (failure) =>
           state = state.copyWith(
@@ -28,12 +34,11 @@ class UserRiverpod extends StateNotifier<UserRiverpodState> {
             errorMessage: failure.message,
           ),
       (success) {
-        final newname = newName;
-        final newphone = newPhone;
         state = state.copyWith(
           state: userState.success,
-          username: newname,
-          userphone: newphone,
+          username: newName,
+          userphone: newPhone,
+          userStateField: newState,
         );
       },
     );
@@ -49,12 +54,12 @@ class UserRiverpod extends StateNotifier<UserRiverpodState> {
             errorMessage: failure.message,
           ),
       (success) {
-        final newname = success.name;
-        final newphone = success.phone;
         state = state.copyWith(
           state: userState.success,
-          username: newname,
-          userphone: newphone,
+          username: success.name,
+          userphone: success.phone,
+          userEmail: success.email,
+          userStateField: success.state,
         );
       },
     );

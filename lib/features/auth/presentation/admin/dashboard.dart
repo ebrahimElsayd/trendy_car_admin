@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:tendy_cart_admin/features/orders/presentation/riverpod/order_riverpod.dart';
+import 'package:tendy_cart_admin/features/orders/presentation/riverpod/order_state.dart';
+import 'package:tendy_cart_admin/features/items/presentation/riverpod/item_riverpod.dart';
+import 'package:tendy_cart_admin/features/items/presentation/riverpod/item_state.dart';
 
-class DashboardScreenAdmin extends StatefulWidget {
+class DashboardScreenAdmin extends ConsumerStatefulWidget {
   const DashboardScreenAdmin({super.key});
 
   @override
-  State<DashboardScreenAdmin> createState() => _DashboardScreenAdminState();
+  ConsumerState<DashboardScreenAdmin> createState() =>
+      _DashboardScreenAdminState();
 }
 
-class _DashboardScreenAdminState extends State<DashboardScreenAdmin> {
+class _DashboardScreenAdminState extends ConsumerState<DashboardScreenAdmin> {
   int selectedTab = 0;
 
   final List<String> drawerItems = [
@@ -18,6 +24,17 @@ class _DashboardScreenAdminState extends State<DashboardScreenAdmin> {
     'Order List',
     'Customer Management',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Load data when the dashboard initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(orderControllerProvider.notifier).getOrdersSummary();
+      ref.read(orderControllerProvider.notifier).getRecentOrders(limit: 5);
+      ref.read(itemControllerProvider.notifier).getAllItems();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,70 +113,155 @@ class _DashboardScreenAdminState extends State<DashboardScreenAdmin> {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Row(
-            children: [
-              Icon(Icons.calendar_today, size: 18),
-              SizedBox(width: 6),
-              Text("Oct 1, 2024 - Sep 1, 2024"),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Total Orders Card
-          _buildStatCard(
-            title: "Total Orders",
-            value: "10.565",
-            icon: Icons.shopping_bag,
-            growth: "+44.7%",
-            comparison: "Compared to Oct 2023",
-          ),
-          const SizedBox(height: 16),
-
-          // Active, Completed, Return Orders Row
           Row(
             children: [
-              Expanded(
-                child: _buildStatCard(
-                  title: "Active Orders",
-                  value: "4000",
-                  growth: "+34.7%",
-                  comparison: "Compared to Oct 2023",
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  title: "Completed Order",
-                  value: "6000",
-                  growth: "+40.7%",
-                  comparison: "Compared to Oct 2023",
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  title: "Return Orders",
-                  value: "565",
-                  growth: "-60.7%",
-                  comparison: "Compared to Oct 2023",
-                ),
-              ),
+              const Icon(Icons.calendar_today, size: 18),
+              const SizedBox(width: 6),
+              Text("${DateTime.now().toLocal()}".split(' ')[0]),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // Orders Summary Cards
+          Consumer(
+            builder: (context, ref, child) {
+              final orderState = ref.watch(orderControllerProvider);
+
+              if (orderState.state == OrderState.loading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (orderState.state == OrderState.error) {
+                return Center(
+                  child: Column(
+                    children: [
+                      Text('Error: ${orderState.error}'),
+                      ElevatedButton(
+                        onPressed: () {
+                          ref
+                              .read(orderControllerProvider.notifier)
+                              .getOrdersSummary();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final summary = orderState.ordersSummary ?? {};
+
+              return Column(
+                children: [
+                  // Total Orders Card
+                  _buildStatCard(
+                    title: "Total Orders",
+                    value: (summary['total_orders'] ?? 0).toString(),
+                    icon: Icons.shopping_bag,
+                    growth: "+44.7%",
+                    comparison: "Compared to last month",
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Active, Completed, Return Orders Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          title: "Active Orders",
+                          value: (summary['active_orders'] ?? 0).toString(),
+                          growth: "+34.7%",
+                          comparison: "Pending orders",
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          title: "Completed Orders",
+                          value: (summary['completed_orders'] ?? 0).toString(),
+                          growth: "+40.7%",
+                          comparison: "Successfully completed",
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          title: "Return Orders",
+                          value: (summary['return_orders'] ?? 0).toString(),
+                          growth: "-60.7%",
+                          comparison: "Returned orders",
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 24),
           const Text(
-            "Best Sellers",
+            "Recent Orders",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
-          _buildBestSellerItem("airpods pro", "\$126.50", "999 sales"),
-          _buildBestSellerItem("Nintendo Pro", "\$126.50", "999 sales"),
-          _buildBestSellerItem("Bose Headphones", "\$126.50", "999 sales"),
+          // Recent Orders List
+          Consumer(
+            builder: (context, ref, child) {
+              final orderState = ref.watch(orderControllerProvider);
+
+              if (orderState.orders.isEmpty) {
+                return const Center(child: Text("No recent orders found"));
+              }
+
+              return Column(
+                children:
+                    orderState.orders.take(3).map((order) {
+                      return _buildOrderItem(
+                        order.itemName.isNotEmpty
+                            ? order.itemName
+                            : "Unknown Item",
+                        "\$${order.itemPrice.toStringAsFixed(2)}",
+                        "${order.quantity} items",
+                        order.orderState,
+                      );
+                    }).toList(),
+              );
+            },
+          ),
 
           const SizedBox(height: 24),
-          Container(child: Container(child: SalesGraph())),
+          const Text(
+            "Top Products",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          // Top Products from Items
+          Consumer(
+            builder: (context, ref, child) {
+              final itemState = ref.watch(itemControllerProvider);
+
+              if (itemState.state == ItemState.loading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (itemState.items.isEmpty) {
+                return const Center(child: Text("No products found"));
+              }
+
+              return Column(
+                children:
+                    itemState.items.take(3).map((item) {
+                      return _buildBestSellerItem(
+                        item.name,
+                        "\$${item.retailPrice.toStringAsFixed(2)}",
+                        "${item.quantity} in stock",
+                      );
+                    }).toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 24),
+          Container(child: SalesGraph()),
         ],
       ),
     );
@@ -221,12 +323,82 @@ class _DashboardScreenAdminState extends State<DashboardScreenAdmin> {
     );
   }
 
-  Widget _buildBestSellerItem(String name, String price, String sales) {
+  Widget _buildOrderItem(
+    String name,
+    String price,
+    String quantity,
+    String status,
+  ) {
+    Color statusColor =
+        status == 'completed'
+            ? Colors.green
+            : status == 'pending'
+            ? Colors.orange
+            : Colors.red;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Container(width: 48, height: 48, color: Colors.grey.shade400),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.shopping_bag, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(quantity, style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBestSellerItem(String name, String price, String stock) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.inventory, color: Colors.white),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -240,7 +412,7 @@ class _DashboardScreenAdminState extends State<DashboardScreenAdmin> {
           Column(
             children: [
               Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(sales, style: const TextStyle(fontSize: 12)),
+              Text(stock, style: const TextStyle(fontSize: 12)),
             ],
           ),
         ],

@@ -24,10 +24,16 @@ class UserRepository {
   Future<Either<Failure, void>> updateUser(
     String userId,
     String newName,
-    String newPhone,
-  ) async {
+    String newPhone, {
+    String? newState,
+  }) async {
     return executeTryAndCatchForRepository(() async {
-      await updateUserInfoDataSource.updateUser(userId, newName, newPhone);
+      await updateUserInfoDataSource.updateUser(
+        userId,
+        newName,
+        newPhone,
+        newState: newState,
+      );
     });
   }
 

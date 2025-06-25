@@ -1,104 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tendy_cart_admin/features/auth/presentation/admin/add_new_product_screen_admin.dart';
 import 'package:tendy_cart_admin/features/auth/presentation/admin/details_screen_of_product_admin.dart';
+import 'package:tendy_cart_admin/features/items/data/models/item_model.dart';
+import 'package:tendy_cart_admin/features/items/presentation/riverpod/item_riverpod.dart';
+import 'package:tendy_cart_admin/features/items/presentation/riverpod/item_state.dart';
 
-class ProductListPageAdmin extends StatelessWidget {
-  final List<Product> products = [
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
+class ProductListPageAdmin extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<ProductListPageAdmin> createState() =>
+      _ProductListPageAdminState();
+}
 
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary:
-          'Rewarding Productsuhggggggggggggggggggggggggggggggggggggggggggggggf',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/cool boy.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-    Product(
-      name: 'Apple 13" Macbook Pro',
-      category: "electronics",
-      summary: 'Rewarding Products',
-      price: 2600.99,
-      sales: 215,
-
-      remaining: 122,
-      imagePath: 'assets/images/product4.png',
-      colors: ['#000000', '#CCCCCC', '#FF69B4'],
-    ),
-
-    // Add more if needed...
-  ];
+class _ProductListPageAdminState extends ConsumerState<ProductListPageAdmin> {
+  @override
+  void initState() {
+    super.initState();
+    // Load items when the page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(itemControllerProvider.notifier).getAllItems();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final itemState = ref.watch(itemControllerProvider);
+
     return Scaffold(
       drawer: SideDrawer(),
       appBar: AppBar(
@@ -133,31 +60,94 @@ class ProductListPageAdmin extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: GridView.builder(
-          itemCount: products.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: 250,
-            crossAxisSpacing: 2,
-            mainAxisSpacing: 5,
-          ),
-          itemBuilder: (context, index) {
-            final product = products[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProductDetailsScreen(product: product),
-                  ),
-                );
-              },
-              child: ProductCard(product: products[index]),
-            );
-          },
-        ),
+        child: _buildBody(itemState),
       ),
     );
+  }
+
+  Widget _buildBody(ItemRiverpodState itemState) {
+    switch (itemState.state) {
+      case ItemState.loading:
+        return const Center(child: CircularProgressIndicator());
+      case ItemState.error:
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Error loading products',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                itemState.error ?? 'Unknown error occurred',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(itemControllerProvider.notifier).getAllItems();
+                },
+                child: Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      case ItemState.success:
+        if (itemState.items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No products found',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Add your first product to get started',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.read(itemControllerProvider.notifier).getAllItems();
+          },
+          child: GridView.builder(
+            itemCount: itemState.items.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisExtent: 280,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 5,
+            ),
+            itemBuilder: (context, index) {
+              final item = itemState.items[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductDetailsScreen(item: item),
+                    ),
+                  );
+                },
+                child: ProductCard(item: item),
+              );
+            },
+          ),
+        );
+      default:
+        return const Center(child: Text('Loading...'));
+    }
   }
 }
 
@@ -165,9 +155,9 @@ class ProductListPageAdmin extends StatelessWidget {
 
 ////////////
 class ProductCard extends StatelessWidget {
-  Product product;
+  final ItemModel item;
 
-  ProductCard({required this.product});
+  const ProductCard({Key? key, required this.item}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -176,120 +166,145 @@ class ProductCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Row (Image + name/category + more icon)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      product.imagePath,
-                      height: 60,
-                      width: 60,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row (Image + name/category + more icon)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child:
+                      item.imageUrl.isNotEmpty
+                          ? Image.network(
+                            item.imageUrl,
+                            height: 60,
+                            width: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 60,
+                                width: 60,
+                                color: Colors.grey[300],
+                                child: Icon(Icons.image_not_supported),
+                              );
+                            },
+                          )
+                          : Container(
+                            height: 60,
+                            width: 60,
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported),
                           ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          product.category,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 8,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "\$${product.price.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.more_horiz),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Summary
-              const Text(
-                "Summary",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 4),
-              Text(product.summary, style: TextStyle(color: Colors.grey[600])),
-              const SizedBox(height: 5),
-
-              // Sales and Remaining
-              Expanded(
-                child: Column(
-                  children: [
-                    // Sales
-                    Expanded(
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 4),
-                          Text("Sales", style: TextStyle(color: Colors.black)),
-                          const Spacer(),
-                          const Icon(
-                            Icons.arrow_upward,
-                            color: Colors.orange,
-                            size: 18,
-                          ),
-                          Text(
-                            product.sales.toString(),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    // const SizedBox(width: 5),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Category ID: ${item.categoryId}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 8),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "\$${item.retailPrice.toStringAsFixed(2)}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.more_horiz),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-                    // Remaining
-                    Expanded(
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 4),
-                          Text(
-                            "Remaining Products",
-                            style: TextStyle(color: Colors.black),
-                          ),
-                          const Spacer(),
-                          const Icon(
-                            Icons.horizontal_rule,
-                            color: Colors.orange,
-                            size: 18,
-                          ),
-                          Text(
-                            product.remaining.toString(),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+            // Summary
+            const Text(
+              "Description",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Text(
+                item.description,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Wholesale Price and Stock Quantity
+            Column(
+              children: [
+                // Wholesale Price
+                Row(
+                  children: [
+                    const SizedBox(width: 4),
+                    Text(
+                      "Wholesale",
+                      style: TextStyle(color: Colors.black, fontSize: 12),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.attach_money,
+                      color: Colors.blue,
+                      size: 18,
+                    ),
+                    Text(
+                      "\$${item.wholesalePrice.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 8),
+
+                // Stock Quantity
+                Row(
+                  children: [
+                    const SizedBox(width: 4),
+                    Text(
+                      "Stock",
+                      style: TextStyle(color: Colors.black, fontSize: 12),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      item.quantity > 0 ? Icons.check_circle : Icons.warning,
+                      color: item.quantity > 0 ? Colors.green : Colors.orange,
+                      size: 18,
+                    ),
+                    Text(
+                      item.quantity.toString(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: item.quantity > 0 ? Colors.green : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -371,28 +386,4 @@ class DrawerItem extends StatelessWidget {
       onTap: () {},
     );
   }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-class Product {
-  final String name;
-  final String category;
-  final String summary;
-  final double price;
-  final int sales;
-  final int remaining;
-  final String imagePath;
-  List<String> colors;
-
-  Product({
-    required this.name,
-    required this.category,
-    required this.summary,
-    required this.price,
-    required this.sales,
-    required this.remaining,
-    required this.imagePath,
-    required this.colors,
-  });
 }

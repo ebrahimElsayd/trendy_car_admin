@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:tendy_cart_admin/features/auth/presentation/admin/all_productOfAdmin.dart';
+import 'package:tendy_cart_admin/features/items/data/models/item_model.dart';
 import 'package:tendy_cart_admin/features/auth/presentation/admin/update_product_screen_admin.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
-  final Product product;
+  final ItemModel item;
 
-  const ProductDetailsScreen({super.key, required this.product});
-
-  Color _parseColor(String hex) {
-    return Color(int.parse(hex.replaceFirst('#', '0xff')));
-  }
+  const ProductDetailsScreen({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +20,35 @@ class ProductDetailsScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   Center(
-                    child: Image.asset(
-                      product.imagePath,
-                      fit: BoxFit.contain,
-                      width: double.infinity,
-                    ),
+                    child:
+                        item.imageUrl.isNotEmpty
+                            ? Image.network(
+                              item.imageUrl,
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: double.infinity,
+                                  height: 200,
+                                  color: Colors.grey[300],
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    size: 64,
+                                    color: Colors.grey[600],
+                                  ),
+                                );
+                              },
+                            )
+                            : Container(
+                              width: double.infinity,
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 64,
+                                color: Colors.grey[600],
+                              ),
+                            ),
                   ),
                   Positioned(
                     top: 10,
@@ -72,7 +92,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product.name,
+                      item.name,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -80,42 +100,63 @@ class ProductDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      product.summary,
+                      item.description,
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 20),
 
-                    // Color list
+                    // Category ID
                     const Text(
-                      'Color',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    Row(
-                      children:
-                          product.colors.map((colorHex) {
-                            return Container(
-                              margin: const EdgeInsets.only(right: 10, top: 8),
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: _parseColor(colorHex),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.black12),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-
-                    const Text(
-                      'Price',
+                      'Category ID',
                       style: TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      '\$${product.price.toStringAsFixed(2)}',
+                      item.categoryId.toString(),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Retail Price
+                    const Text(
+                      'Retail Price',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '\$${item.retailPrice.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Wholesale Price
+                    const Text(
+                      'Wholesale Price',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '\$${item.wholesalePrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Stock Quantity
+                    const Text(
+                      'Stock Quantity',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      item.quantity.toString(),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: item.quantity > 0 ? Colors.green : Colors.red,
                       ),
                     ),
 

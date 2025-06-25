@@ -6,7 +6,6 @@ import 'package:tendy_cart_admin/core/utils/custom_txt_field.dart';
 import 'package:tendy_cart_admin/core/utils/show_snack_bar.dart';
 
 import '../../../../core/comman/app_user/app_user_riverpod.dart';
-
 import '../riverpods/user_riverpod.dart';
 
 class UserInfoScreen extends ConsumerStatefulWidget {
@@ -19,34 +18,70 @@ class UserInfoScreen extends ConsumerStatefulWidget {
 class _UserInfoScreenState extends ConsumerState<UserInfoScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _stateController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch user data when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(appUserRiverpodProvider).user;
+      if (user != null && user.id != null) {
+        ref.read(userProvider.notifier).getUserInfo(user.id.toString());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _stateController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(appUserRiverpodProvider).user!;
+    final user = ref.watch(appUserRiverpodProvider).user;
+    final userState = ref.watch(userProvider);
 
+    // Update text controllers when user data is loaded
     ref.listen(userProvider, (previous, next) {
-      if (next.isSuccess()) {
-        ref
-            .read(appUserRiverpodProvider.notifier)
-            .updateUserData(
-              user.copyWith(
-                name: _nameController.text,
-                phone: int.parse(_phoneController.text),
-              ),
-            );
-        showSnackBar(context, "SUCCESS");
+      if (next.isSuccess() && next.username != null) {
+        _nameController.text = next.username ?? '';
+        _phoneController.text = next.userphone ?? '';
+        _emailController.text = next.userEmail ?? '';
+        _stateController.text = next.userStateField ?? '';
+      }
+
+      if (next.isSuccess() && previous?.state != next.state) {
+        // Update the global user state
+        if (user != null) {
+          ref
+              .read(appUserRiverpodProvider.notifier)
+              .updateUserData(
+                user.copyWith(
+                  name: _nameController.text,
+                  phone: int.tryParse(_phoneController.text),
+                  email: _emailController.text,
+                  state: _stateController.text,
+                ),
+              );
+        }
+        showSnackBar(context, "Profile updated successfully!");
       } else if (next.isError()) {
-        showSnackBar(context, "ERROR");
+        showSnackBar(context, "Error: ${next.errorMessage}");
       }
     });
 
-    final state = ref.watch(userProvider);
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child:
-              state.isLoading()
+              userState.isLoading()
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,7 +108,9 @@ class _UserInfoScreenState extends ConsumerState<UserInfoScreen> {
                               bottom: 0,
                               right: 0,
                               child: InkWell(
-                                onTap: () {},
+                                onTap: () {
+                                  // Handle profile picture update
+                                },
                                 child: CircleAvatar(
                                   radius: 16,
                                   backgroundColor: Color(0xFFFF9E56),
@@ -89,41 +126,187 @@ class _UserInfoScreenState extends ConsumerState<UserInfoScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Name Field
+                      const Text(
+                        'Full Name',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       CustomTextField(
-                        hinttxt: "${user.name}",
+                        hinttxt: userState.username ?? "Enter your name",
                         mycontroller: _nameController,
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 20),
-                      CustomTextField(
-                        hinttxt: "${user.phone}",
-                        mycontroller: _phoneController,
-                        textInputAction: TextInputAction.next,
+
+                      // Email Field (Read-only)
+                      const Text(
+                        'Email Address',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _emailController,
+                        enabled: false,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText:
+                              userState.userEmail ??
+                              user?.email ??
+                              "Email not available",
+                          contentPadding: const EdgeInsets.all(15),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 172, 172, 172),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 172, 172, 172),
+                            ),
+                          ),
+                          disabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 200, 200, 200),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Phone Field
+                      const Text(
+                        'Phone Number',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText:
+                              userState.userphone ?? "Enter your phone number",
+                          contentPadding: const EdgeInsets.all(15),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 172, 172, 172),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 172, 172, 172),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // State Field
+                      const Text(
+                        'State/Region',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      CustomTextField(
+                        hinttxt:
+                            userState.userStateField ??
+                            "Enter your state/region",
+                        mycontroller: _stateController,
+                        textInputAction: TextInputAction.done,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Display current user info
+                      if (userState.isSuccess())
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Current Profile Information',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoRow(
+                                'Name',
+                                userState.username ?? 'Not set',
+                              ),
+                              _buildInfoRow(
+                                'Email',
+                                userState.userEmail ?? 'Not set',
+                              ),
+                              _buildInfoRow(
+                                'Phone',
+                                userState.userphone ?? 'Not set',
+                              ),
+                              _buildInfoRow(
+                                'State',
+                                userState.userStateField ?? 'Not set',
+                              ),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: 24),
+
                       CustomTxtBtn(
-                        btnName: 'Update Profile',
+                        btnName:
+                            userState.isLoading()
+                                ? 'Updating...'
+                                : 'Update Profile',
                         btnWidth: 1,
                         btnHeight: 40,
                         btnradious: 20,
                         bgclr: Color(0xFFFF9E56),
                         txtstyle: const TextStyle(color: Colors.white),
                         onPress: () {
-                          print(state.isLoading());
-                          if (!state.isLoading()) {
+                          if (!userState.isLoading() && user?.id != null) {
                             ref
                                 .read(userProvider.notifier)
                                 .updateUser(
-                                  user.id.toString(),
-                                  _nameController.text,
-                                  _phoneController.text,
+                                  user!.id.toString(),
+                                  _nameController.text.trim(),
+                                  _phoneController.text.trim(),
+                                  newState: _stateController.text.trim(),
                                 );
                           }
                         },
                       ),
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
                         child: const Text(
                           'Cancel',
                           style: TextStyle(
@@ -134,6 +317,27 @@ class _UserInfoScreenState extends ConsumerState<UserInfoScreen> {
                     ],
                   ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.grey)),
+          ),
+        ],
       ),
     );
   }

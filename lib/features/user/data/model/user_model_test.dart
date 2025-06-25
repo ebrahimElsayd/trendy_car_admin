@@ -5,19 +5,41 @@ class userModelTest {
   int id;
   String name;
   String phone;
+  String email;
+  String? state;
 
-  userModelTest({required this.id, required this.name, required this.phone});
+  userModelTest({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.email,
+    this.state,
+  });
 
-  userModelTest copyWith({int? id, String? name, String? phone}) {
+  userModelTest copyWith({
+    int? id,
+    String? name,
+    String? phone,
+    String? email,
+    String? state,
+  }) {
     return userModelTest(
       id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
+      email: email ?? this.email,
+      state: state ?? this.state,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{'id': id, 'name': name, 'phone': phone};
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'state': state,
+    };
   }
 
   factory userModelTest.fromMap(Map<String, dynamic> map) {
@@ -25,6 +47,8 @@ class userModelTest {
       id: map['id'] as int,
       name: map['name'] as String,
       phone: map['phone'] as String,
+      email: map['email'] as String,
+      state: map['state'] as String?,
     );
   }
 
@@ -34,15 +58,25 @@ class userModelTest {
       userModelTest.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() => 'userModel(id: $id, name: $name, phone: $phone)';
+  String toString() =>
+      'userModel(id: $id, name: $name, phone: $phone, email: $email, state: $state)';
 
   @override
   bool operator ==(covariant userModelTest other) {
     if (identical(this, other)) return true;
 
-    return other.id == id && other.name == name && other.phone == phone;
+    return other.id == id &&
+        other.name == name &&
+        other.phone == phone &&
+        other.email == email &&
+        other.state == state;
   }
 
   @override
-  int get hashCode => id.hashCode ^ name.hashCode ^ phone.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      phone.hashCode ^
+      email.hashCode ^
+      state.hashCode;
 }
