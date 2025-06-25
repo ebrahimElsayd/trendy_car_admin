@@ -59,8 +59,22 @@ class UserRiverpod extends StateNotifier<UserRiverpodState> {
           username: success.name,
           userphone: success.phone,
           userEmail: success.email,
-          userStateField: success.state,
         );
+      },
+    );
+  }
+
+  Future<void> getAllUsers() async {
+    state = state.copyWith(state: userState.loading);
+    final result = await repository.getAllUsers();
+    result.fold(
+      (failure) =>
+          state = state.copyWith(
+            state: userState.error,
+            errorMessage: failure.message,
+          ),
+      (users) {
+        state = state.copyWith(state: userState.success, users: users);
       },
     );
   }

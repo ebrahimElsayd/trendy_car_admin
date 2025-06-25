@@ -2,7 +2,7 @@
 import 'dart:convert';
 
 class userModelTest {
-  int id;
+  String id;
   String name;
   String phone;
   String email;
@@ -17,7 +17,7 @@ class userModelTest {
   });
 
   userModelTest copyWith({
-    int? id,
+    String? id,
     String? name,
     String? phone,
     String? email,
@@ -44,11 +44,11 @@ class userModelTest {
 
   factory userModelTest.fromMap(Map<String, dynamic> map) {
     return userModelTest(
-      id: map['id'] as int,
-      name: map['name'] as String,
-      phone: map['phone'] as String,
-      email: map['email'] as String,
-      state: map['state'] as String?,
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      phone: map['phone']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      state: map['state']?.toString(),
     );
   }
 

@@ -1,133 +1,111 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:tendy_cart_admin/features/auth/presentation/admin/order_details.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tendy_cart_admin/features/orders/presentation/riverpod/order_riverpod.dart';
+import 'package:tendy_cart_admin/features/orders/presentation/riverpod/order_state.dart';
+import 'package:tendy_cart_admin/features/orders/data/models/user_order_model.dart';
 
-class OrderModel {
-  final String orderId;
-  final String date;
-  final String customerName;
-  final String productName;
-  final String status;
-  bool isSelected;
-
-  OrderModel({
-    required this.orderId,
-    required this.date,
-    required this.customerName,
-    required this.productName,
-    this.status = 'Pending',
-    this.isSelected = false,
-  });
-}
-
-class OrdersListScreen extends StatefulWidget {
+class OrdersListScreen extends ConsumerStatefulWidget {
   @override
-  State<OrdersListScreen> createState() => _OrdersListScreenState();
+  ConsumerState<OrdersListScreen> createState() => _OrdersListScreenState();
 }
 
-class _OrdersListScreenState extends State<OrdersListScreen> {
-  List<OrderModel> orders = [
-    OrderModel(
-      orderId: '#25424',
-      date: 'Sep 6th,2024',
-      customerName: 'Esraa',
-      productName: 'Item name',
-      status: 'Pending',
-    ),
-    OrderModel(
-      orderId: '#25344',
-      date: 'Sep 5th,2024',
-      customerName: 'Osama',
-      productName: 'Item name',
-      status: 'Delivered',
-    ),
-    OrderModel(
-      orderId: '#29874',
-      date: 'Sep 3th,2024',
-      customerName: 'Ahmed',
-      productName: 'Item name',
-      status: 'Cancelled',
-    ),
-    OrderModel(
-      orderId: '#25424',
-      date: 'Sep 6th,2024',
-      customerName: 'Esraa',
-      productName: 'Item name',
-      status: 'Pending',
-    ),
-    OrderModel(
-      orderId: '#25344',
-      date: 'Sep 5th,2024',
-      customerName: 'Osama',
-      productName: 'Item name',
-      status: 'Delivered',
-    ),
-    OrderModel(
-      orderId: '#29874',
-      date: 'Sep 3th,2024',
-      customerName: 'Ahmed',
-      productName: 'Item name',
-      status: 'Cancelled',
-    ),
-    OrderModel(
-      orderId: '#25424',
-      date: 'Sep 6th,2024',
-      customerName: 'Esraa',
-      productName: 'Item name',
-      status: 'Pending',
-    ),
-    OrderModel(
-      orderId: '#25344',
-      date: 'Sep 5th,2024',
-      customerName: 'Osama',
-      productName: 'Item name',
-      status: 'Delivered',
-    ),
-    OrderModel(
-      orderId: '#29874',
-      date: 'Sep 3th,2024',
-      customerName: 'Ahmed',
-      productName: 'Item name',
-      status: 'Cancelled',
-    ),
-    OrderModel(
-      orderId: '#25424',
-      date: 'Sep 6th,2024',
-      customerName: 'Esraa',
-      productName: 'Item name',
-      status: 'Pending',
-    ),
-    OrderModel(
-      orderId: '#25344',
-      date: 'Sep 5th,2024',
-      customerName: 'Osama',
-      productName: 'Item name',
-      status: 'Delivered',
-    ),
-    OrderModel(
-      orderId: '#29874',
-      date: 'Sep 3th,2024',
-      customerName: 'Ahmed',
-      productName: 'Item name',
-      status: 'Cancelled',
-    ),
-  ];
+class _OrdersListScreenState extends ConsumerState<OrdersListScreen> {
+  List<UserOrderModel> orders = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Delay the provider call until after the widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchOrders();
+    });
+  }
+
+  Future<void> fetchOrders() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    // Fetch all orders
+    await ref.read(orderControllerProvider.notifier).getAllOrders();
+  }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Pending':
+    switch (status.toLowerCase()) {
+      case 'pending':
         return Colors.orange[100]!;
-      case 'Delivered':
+      case 'completed':
+      case 'delivered':
         return Colors.green[100]!;
-      case 'Cancelled':
+      case 'cancelled':
+      case 'canceled':
         return Colors.red[100]!;
       default:
         return Colors.grey[300]!;
     }
   }
 
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    String ordinal(int number) {
+      if (number >= 11 && number <= 13) return 'th';
+      switch (number % 10) {
+        case 1:
+          return 'st';
+        case 2:
+          return 'nd';
+        case 3:
+          return 'rd';
+        default:
+          return 'th';
+      }
+    }
+
+    return '${months[date.month - 1]} ${date.day}${ordinal(date.day)}, ${date.year}';
+  }
+
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Listen to order state changes
+    ref.listen<OrderRiverpodState>(orderControllerProvider, (previous, next) {
+      if (next.orders.isNotEmpty) {
+        setState(() {
+          orders = next.orders;
+          isLoading = false;
+        });
+      }
+
+      if (next.state == OrderState.error) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error ?? 'Error loading orders')),
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -137,69 +115,100 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           'Orders List',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-      ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: DataTable(
-            columnSpacing: 16.w,
-            columns: const [
-              DataColumn(label: Text('Product')),
-              DataColumn(label: Text('Order ID')),
-              DataColumn(label: Text('Date')),
-              DataColumn(label: Text('Customer Name')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('')),
-            ],
-            rows:
-                orders.map((order) {
-                  return DataRow(
-                    selected: order.isSelected,
-                    onSelectChanged: (value) {
-                      setState(() {
-                        order.isSelected = value ?? false;
-                      });
-                    },
-                    cells: [
-                      DataCell(Text(order.productName)),
-                      DataCell(Text(order.orderId)),
-                      DataCell(Text(order.date)),
-                      DataCell(Text(order.customerName)),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(order.status),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(order.status),
-                        ),
-                      ),
-                      DataCell(
-                        ElevatedButton(
-                          child: Text("View"),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        OrdersDetailsScreen(order: order),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+        actions: [
+          IconButton(
+            onPressed: fetchOrders,
+            icon: const Icon(Icons.refresh, color: Colors.black),
           ),
-        ),
+        ],
       ),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : orders.isEmpty
+              ? const Center(
+                child: Text(
+                  'No orders found',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              )
+              : SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    columnSpacing: 16.w,
+                    columns: const [
+                      DataColumn(label: Text('Product')),
+                      DataColumn(label: Text('Order ID')),
+                      DataColumn(label: Text('Date')),
+                      DataColumn(label: Text('Customer Name')),
+                      DataColumn(label: Text('Status')),
+                      DataColumn(label: Text('')),
+                    ],
+                    rows:
+                        orders.map((order) {
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  order.itemName.isNotEmpty
+                                      ? order.itemName
+                                      : 'N/A',
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  order.orderId.isNotEmpty
+                                      ? order.orderId
+                                      : 'N/A',
+                                ),
+                              ),
+                              DataCell(Text(_formatDate(order.orderCreatedAt))),
+                              DataCell(
+                                Text(
+                                  order.userName.isNotEmpty
+                                      ? order.userName
+                                      : 'N/A',
+                                ),
+                              ),
+                              DataCell(
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(order.orderState),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    _capitalizeFirst(order.orderState),
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                ElevatedButton(
+                                  child: const Text("View"),
+                                  onPressed: () {
+                                    // Note: OrdersDetailsScreen might need to be updated to accept UserOrderModel
+                                    // For now, we'll just show a snackbar or you can update the details screen
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Order ID: ${order.orderId}',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                  ),
+                ),
+              ),
     );
   }
 }

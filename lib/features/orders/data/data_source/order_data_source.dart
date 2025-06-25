@@ -65,34 +65,49 @@ class OrderDataSourceImpl implements OrderDataSource {
   @override
   Future<Map<String, dynamic>> getOrdersSummary() async {
     return executeTryAndCatchForDataLayer(() async {
-      // Get total orders count
-      final totalOrdersResponse = await supabaseClient
+      // Get all orders to count states dynamically
+      final allOrdersResponse = await supabaseClient
           .from('user_orders')
-          .select('*');
+          .select('state');
 
-      // Get active orders count
-      final activeOrdersResponse = await supabaseClient
-          .from('user_orders')
-          .select('*')
-          .eq('state', 'pending');
+      // Count orders by state
+      Map<String, int> stateCounts = {};
+      for (var order in allOrdersResponse) {
+        String state = order['state']?.toString().toLowerCase() ?? 'unknown';
+        stateCounts[state] = (stateCounts[state] ?? 0) + 1;
+      }
 
-      // Get completed orders count
-      final completedOrdersResponse = await supabaseClient
-          .from('user_orders')
-          .select('*')
-          .eq('state', 'completed');
+      // Map common state variations to our expected states
+      int pendingCount = 0;
+      int completedCount = 0;
+      int cancelledCount = 0;
 
-      // Get return orders count
-      final returnOrdersResponse = await supabaseClient
-          .from('user_orders')
-          .select('*')
-          .eq('state', 'returned');
+      for (var entry in stateCounts.entries) {
+        String state = entry.key.toLowerCase();
+        int count = entry.value;
+
+        if (state.contains('pending') ||
+            state.contains('waiting') ||
+            state.contains('processing')) {
+          pendingCount += count;
+        } else if (state.contains('completed') ||
+            state.contains('delivered') ||
+            state.contains('finished') ||
+            state.contains('done')) {
+          completedCount += count;
+        } else if (state.contains('cancelled') ||
+            state.contains('canceled') ||
+            state.contains('rejected')) {
+          cancelledCount += count;
+        }
+      }
 
       return {
-        'total_orders': totalOrdersResponse.length,
-        'active_orders': activeOrdersResponse.length,
-        'completed_orders': completedOrdersResponse.length,
-        'return_orders': returnOrdersResponse.length,
+        'total_orders': allOrdersResponse.length,
+        'pending_orders': pendingCount,
+        'completed_orders': completedCount,
+        'cancelled_orders': cancelledCount,
+        'all_states': stateCounts, // Include this for debugging
       };
     });
   }

@@ -20,6 +20,8 @@ abstract class UserDataSource {
   });
 
   Future<Map<String, dynamic>> getUserInfo(String userId);
+
+  Future<List<Map<String, dynamic>>> getAllUsers();
 }
 
 class UserDataSourceImpl implements UserDataSource {
@@ -41,7 +43,10 @@ class UserDataSourceImpl implements UserDataSource {
         updateData['state'] = newState;
       }
 
-      await supabaseClient.from('users').update(updateData).eq('id', userId);
+      await supabaseClient
+          .from('users')
+          .update(updateData)
+          .eq('id', int.parse(userId));
     });
   }
 
@@ -52,10 +57,22 @@ class UserDataSourceImpl implements UserDataSource {
           await supabaseClient
               .from('users')
               .select('id, name, email, phone, state')
-              .eq('id', userId)
+              .eq('id', int.parse(userId))
               .single();
 
       return user;
+    });
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    return executeTryAndCatchForDataLayer(() async {
+      final users = await supabaseClient
+          .from('users')
+          .select('id, name, email, phone, state')
+          .order('id', ascending: true);
+
+      return List<Map<String, dynamic>>.from(users);
     });
   }
 }

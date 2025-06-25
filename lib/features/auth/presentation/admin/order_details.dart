@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:tendy_cart_admin/features/auth/presentation/admin/order_list.dart';
+import 'package:tendy_cart_admin/features/orders/data/models/user_order_model.dart';
 
 class OrdersDetailsScreen extends StatelessWidget {
-  final OrderModel order;
+  final UserOrderModel order;
 
   OrdersDetailsScreen({required this.order});
 
@@ -50,7 +50,7 @@ class OrdersDetailsScreen extends StatelessWidget {
                       color: Colors.orange[100],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(order.status),
+                    child: Text(order.orderState),
                   ),
                 ],
               ),
@@ -65,7 +65,10 @@ class OrdersDetailsScreen extends StatelessWidget {
                       children: [
                         Icon(Icons.calendar_today, color: Colors.black54),
                         const SizedBox(width: 4),
-                        Text(order.date, style: TextStyle(color: Colors.black)),
+                        Text(
+                          DateFormat.yMMMd().format(order.orderCreatedAt),
+                          style: TextStyle(color: Colors.black),
+                        ),
                         const SizedBox(width: 40),
                         ElevatedButton(
                           style: ButtonStyle(
@@ -94,7 +97,7 @@ class OrdersDetailsScreen extends StatelessWidget {
                 child: ListTile(
                   leading: Icon(Icons.person),
                   title: Text(
-                    'Full Name: ${order.customerName}\nEmail: esraa@gmail.com\nPhone: 01068704149',
+                    'Full Name: ${order.userName}\nEmail: esraa@gmail.com\nPhone: 01068704149',
                   ),
                   trailing: ElevatedButton(
                     onPressed: () {},
@@ -106,7 +109,7 @@ class OrdersDetailsScreen extends StatelessWidget {
                 child: ListTile(
                   leading: Icon(Icons.local_shipping),
                   title: Text(
-                    'Shipping: Next express\nPayment Method: Mastercard\nStatus: ${order.status}',
+                    'Shipping: Next express\nPayment Method: Mastercard\nStatus: ${order.orderState}',
                   ),
                   trailing: ElevatedButton(
                     onPressed: () {},
@@ -128,7 +131,7 @@ class OrdersDetailsScreen extends StatelessWidget {
                 child: ListTile(
                   leading: Icon(Icons.payment),
                   title: Text(
-                    'Master Card **** **** 6557\nBusiness name: ${order.customerName}\nPhone: 01068704149',
+                    'Master Card **** **** 6557\nBusiness name: ${order.userName}\nPhone: 01068704149',
                   ),
                 ),
               ),

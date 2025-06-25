@@ -43,4 +43,13 @@ class UserRepository {
       return userModelTest.fromMap(user);
     });
   }
+
+  Future<Either<Failure, List<userModelTest>>> getAllUsers() async {
+    return executeTryAndCatchForRepository(() async {
+      final usersData = await updateUserInfoDataSource.getAllUsers();
+      final users =
+          usersData.map((userData) => userModelTest.fromMap(userData)).toList();
+      return users;
+    });
+  }
 }

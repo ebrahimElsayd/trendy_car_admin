@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:tendy_cart_admin/features/auth/presentation/admin/customer_management_screen.dart';
 
+import '../../../user/data/model/user_model_test.dart';
+
 class CustomerDetailsPage extends StatelessWidget {
-  final Customer customer;
+  final userModelTest customer;
 
   const CustomerDetailsPage({required this.customer, super.key});
 
@@ -29,7 +31,17 @@ class CustomerDetailsPage extends StatelessWidget {
             child: Column(
               children: [
                 CircleAvatar(
-                  backgroundImage: AssetImage(customer.avatarPath),
+                  backgroundColor: Colors.blue[100],
+                  child: Text(
+                    customer.name.isNotEmpty
+                        ? customer.name[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      fontSize: 24,
+                    ),
+                  ),
                   radius: 40,
                 ),
                 const SizedBox(height: 8),
